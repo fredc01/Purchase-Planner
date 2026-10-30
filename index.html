@@ -34,6 +34,18 @@
       <div class="toolbar">
         <input id="q" type="search" placeholder="Search item, project or supplier…" aria-label="Search">
         <select id="fCat" aria-label="Filter by category"></select>
+        <select id="fDate" aria-label="Show data from">
+          <option value="today" selected>📅 Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="7">Last 7 days</option>
+          <option value="month">This month</option>
+          <option value="all">All dates</option>
+          <option value="range">Pick a date range…</option>
+        </select>
+        <span class="daterange" id="dateRange" hidden>
+          <label>From <input type="date" id="dFrom" aria-label="From date"></label>
+          <label>To <input type="date" id="dTo" aria-label="To date"></label>
+        </span>
         <select id="fSort" aria-label="Sort cards">
           <option value="priority">Sort: Priority</option>
           <option value="needed">Sort: Needed by</option>

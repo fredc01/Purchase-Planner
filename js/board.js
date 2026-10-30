@@ -5,9 +5,24 @@
   const PRI = { high: 0, medium: 1, low: 2 }, PRI_LABEL = { high: "High", medium: "Medium", low: "Low" };
   const lastDate = (i) => PP.lines(i).reduce((m, l) => (l.date > m ? l.date : m), "");
 
+  // Date filter. An item belongs to a day if it was added that day or any purchase on it is dated that day.
+  function dateWindow() {
+    const m = $("#fDate").value, t = today(), d = new Date();
+    const back = (n) => { const x = new Date(); x.setDate(x.getDate() - n); return PP.iso(x); };
+    if (m === "all") return null;
+    if (m === "yesterday") return [back(1), back(1)];
+    if (m === "7") return [back(6), t];
+    if (m === "month") return [t.slice(0, 7) + "-01", t];
+    if (m === "range") { let a = $("#dFrom").value || "0000-01-01", b = $("#dTo").value || "9999-12-31"; if (a > b) [a, b] = [b, a]; return [a, b]; }
+    return [t, t];
+  }
+  const inWin = (w, d) => !w || (d && d >= w[0] && d <= w[1]);
+  const inDates = (w, i) => !w || inWin(w, i.created) || PP.lines(i).some(l => inWin(w, l.date));
+
   function visible(status) {
+    const win = dateWindow();
     const q = ($("#q").value || "").trim().toLowerCase(), cat = $("#fCat").value, sort = $("#fSort").value;
-    const list = PP.state.items.filter(i => i.status === status && (cat === "all" || i.category === cat) &&
+    const list = PP.state.items.filter(i => i.status === status && inDates(win, i) && (cat === "all" || i.category === cat) &&
       (!q || [i.name, i.project, i.notes, i.category, ...PP.lines(i).map(l => `${l.supplier} ${l.ref}`)].join(" ").toLowerCase().includes(q)));
     const amt = (i) => (status === "bought" ? PP.paid(i) : PP.budget(i));
     const byDate = (a, b) => lastDate(b).localeCompare(lastDate(a)) || (b.created || "").localeCompare(a.created || "");
@@ -100,13 +115,17 @@
     renderFunds();
     fillFilters();
     const todo = visible("todo"), bought = visible("bought"), n = (l) => `${l.length} ${l.length === 1 ? "item" : "items"}`;
-    $("#listTodo").innerHTML = todo.map(card).join("") || `<p class="empty">Nothing to purchase. Press “+ Add item to purchase” to list what the site needs.</p>`;
-    $("#listBought").innerHTML = bought.map(card).join("") || `<p class="empty">Nothing purchased yet. Add a purchase on a card; once everything needed is bought it moves here.</p>`;
+    $("#listTodo").innerHTML = todo.map(card).join("") || `<p class="empty">Nothing to purchase for this date. Press “+ Add item to purchase”, or change the date above.</p>`;
+    $("#listBought").innerHTML = bought.map(card).join("") || `<p class="empty">Nothing purchased for this date. Add a purchase on a card, or change the date above.</p>`;
     $("#sumTodo").textContent = `${n(todo)} · about ${money(todo.reduce((s, i) => s + PP.remaining(i) * (Number(i.est) || 0), 0))} left to buy`;
     $("#sumBought").textContent = `${n(bought)} · ${money(bought.reduce((s, i) => s + PP.paid(i), 0))} spent`;
     $("#cntTodo").textContent = todo.length; $("#cntBought").textContent = bought.length;
   };
-  ["input", "change"].forEach(ev => ["#q", "#fCat", "#fSort"].forEach(s => $(s).addEventListener(ev, PP.renderBoard)));
+  $("#fDate").addEventListener("change", () => {
+    const r = $("#fDate").value === "range", box = $("#dateRange"); box.hidden = !r;
+    if (r && !$("#dFrom").value) $("#dFrom").value = $("#dTo").value = today();
+  });
+  ["input", "change"].forEach(ev => ["#q", "#fCat", "#fSort", "#fDate", "#dFrom", "#dTo"].forEach(s => $(s).addEventListener(ev, PP.renderBoard)));
   $("#paneSwitch").addEventListener("click", (e) => {
     const b = e.target.closest("[data-pane]"); if (!b) return;
     $("#board").dataset.pane = b.dataset.pane;

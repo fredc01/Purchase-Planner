@@ -185,3 +185,8 @@ table.log .r { text-align: right; } table.log tbody tr:hover { background: var(-
 .refresh-btn.spinning .ri { display: inline-block; animation: ppspin .8s linear infinite; }
 @keyframes ppspin { to { transform: rotate(360deg); } }
 @media (max-width: 760px) { .toolbar .refresh-btn { flex: 0 0 auto; } }
+
+/* board date filter */
+.daterange { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.daterange label { display: inline-flex; align-items: center; gap: .35rem; font-size: .9rem; color: var(--muted); }
+@media (max-width: 760px) { .toolbar #fDate { flex: 1 1 100%; } .daterange { flex: 1 1 100%; } .daterange label { flex: 1 1 40%; } .daterange input { flex: 1; }}
