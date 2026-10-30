@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Purchase Planner</title>
+  <meta name="description" content="Plan the construction materials you need, record purchases per supplier, and see where the money goes.">
+  <meta name="theme-color" content="#0f7c8c">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="appbar">
+    <div class="brand"><span class="mark" aria-hidden="true">🏗️</span><h1>Purchase Planner</h1></div>
+    <nav class="tabs" id="tabs" aria-label="Sections">
+      <button type="button" data-tab="board" aria-selected="true"><span aria-hidden="true">🗂️</span><span class="t">Board</span></button>
+      <button type="button" data-tab="reports" aria-selected="false"><span aria-hidden="true">📊</span><span class="t">Reports</span></button>
+      <button type="button" data-tab="budget" aria-selected="false"><span aria-hidden="true">🎯</span><span class="t">Budget</span></button>
+      <button type="button" data-tab="settings" aria-selected="false"><span aria-hidden="true">⚙️</span><span class="t">Settings</span></button>
+    </nav>
+    <button class="btn small ghost" id="signBtn" type="button" hidden>Sign in</button>
+  </header>
+
+  <main class="wide">
+    <!-- BOARD: "To purchase" cards on the left, "Purchased" cards on the right.
+         Inside every card: what is needed (left) and the purchase items per supplier (right). -->
+    <section class="tab" id="tab-board">
+      <div class="funds-bar" id="fundsBar" aria-label="Remaining balances"></div>
+      <div class="toolbar">
+        <input id="q" type="search" placeholder="Search item, project or supplier…" aria-label="Search">
+        <select id="fCat" aria-label="Filter by category"></select>
+        <select id="fSort" aria-label="Sort cards">
+          <option value="priority">Sort: Priority</option>
+          <option value="needed">Sort: Needed by</option>
+          <option value="price">Sort: Amount (high first)</option>
+          <option value="newest">Sort: Newest</option>
+        </select>
+        <button class="btn primary" id="addBtn" type="button">+ Add item to purchase</button>
+      </div>
+      <div class="pane-switch" id="paneSwitch" role="group" aria-label="Show">
+        <button type="button" data-pane="todo" aria-pressed="true">To purchase <b id="cntTodo">0</b></button>
+        <button type="button" data-pane="bought" aria-pressed="false">Purchased <b id="cntBought">0</b></button>
+      </div>
+      <div class="board" id="board" data-pane="todo">
+        <section class="col todo" aria-labelledby="hTodo">
+          <header class="col-head"><h2 id="hTodo">🛒 To purchase</h2><p id="sumTodo"></p></header>
+          <div class="cards" id="listTodo" data-drop="todo"></div>
+        </section>
+        <section class="col bought" aria-labelledby="hBought">
+          <header class="col-head"><h2 id="hBought">✅ Purchased</h2><p id="sumBought"></p></header>
+          <div class="cards" id="listBought" data-drop="bought"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="tab" id="tab-reports" hidden><div id="reportsRoot"></div></section>
+    <section class="tab" id="tab-budget" hidden><div id="budgetRoot"></div></section>
+    <section class="tab" id="tab-settings" hidden><div id="settingsRoot"></div></section>
+  </main>
+
+  <!-- Add / edit what is needed -->
+  <dialog id="itemDialog" aria-labelledby="itemTitle">
+    <form id="itemForm" method="dialog" novalidate>
+      <h3 id="itemTitle">Add item to purchase</h3>
+      <input type="hidden" name="id">
+      <label>Item / material<input name="name" maxlength="80" placeholder="Portland cement 40kg" autocomplete="off"></label>
+      <div class="row2">
+        <label>Category<select name="category"></select></label>
+        <label>Project / area<input name="project" list="projectList" maxlength="50" placeholder="Optional" autocomplete="off"></label>
+      </div>
+      <div class="row2">
+        <label>Quantity needed<input name="qty" type="number" min="0" step="any" inputmode="decimal" value="1"></label>
+        <label>Unit<input name="unit" list="unitList" maxlength="16" value="pcs" autocomplete="off"></label>
+      </div>
+      <div class="row2">
+        <label>Budget price (each)<input name="est" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional"></label>
+        <label>Priority<select name="priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></label>
+      </div>
+      <label>Needed by<input name="needed" type="date"></label>
+      <label>Notes<textarea name="notes" rows="2" maxlength="200" placeholder="Size, brand, delivery notes (optional)"></textarea></label>
+      <datalist id="projectList"></datalist>
+      <datalist id="unitList">
+        <option value="pcs"><option value="bags"><option value="sheets"><option value="rolls"><option value="lengths"><option value="sets"><option value="boxes">
+        <option value="pails"><option value="gallons"><option value="liters"><option value="kg"><option value="m"><option value="sq.m"><option value="cu.m"><option value="lot">
+      </datalist>
+      <p class="form-error" id="itemError" role="alert"></p>
+      <div class="dialog-actions">
+        <button class="btn" type="button" data-close>Cancel</button>
+        <button class="btn primary" type="submit" id="itemSave">Save item</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Add / edit one purchase (one supplier, one quantity, one price) -->
+  <dialog id="buyDialog" aria-labelledby="buyTitle">
+    <form id="buyForm" method="dialog" novalidate>
+      <h3 id="buyTitle">Add purchase</h3>
+      <p class="hint" id="buyName"></p>
+      <label>Supplier<input name="supplier" list="supplierList" maxlength="60" placeholder="Who did you buy from?" autocomplete="off"></label>
+      <div class="row2">
+        <label>Quantity bought<input name="qty" type="number" min="0" step="any" inputmode="decimal"></label>
+        <label>Price (each)<input name="price" type="number" min="0" step="0.01" inputmode="decimal"></label>
+      </div>
+      <div class="row2">
+        <label>Date bought<input name="date" type="date"></label>
+        <label>Receipt / DR no.<input name="ref" maxlength="30" placeholder="Optional" autocomplete="off"></label>
+      </div>
+      <label>Paid from<select name="source">
+        <option value="">Choose…</option><option value="coh">Cash on hand (COH)</option><option value="bank">Bank</option><option value="split">Split between COH and BANK</option></select></label>
+      <div class="row2" id="splitRow" hidden>
+        <label>From COH (amount)<input name="cohAmt" type="number" min="0" step="0.01" inputmode="decimal" placeholder="How much from COH"></label>
+        <label>From BANK (amount)<input name="bankAmt" type="number" min="0" step="0.01" inputmode="decimal" placeholder="How much from BANK"></label>
+      </div>
+      <datalist id="supplierList"></datalist>
+      <p class="hint total-line" id="buyTotal"></p>
+      <p class="form-error" id="buyError" role="alert"></p>
+      <div class="dialog-actions">
+        <button class="btn" type="button" data-close>Cancel</button>
+        <button class="btn good" type="submit" id="buySave">Save purchase</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Are you sure? -->
+  <dialog id="confirmDialog" aria-labelledby="confirmTitle">
+    <form method="dialog">
+      <h3 id="confirmTitle">Are you sure?</h3>
+      <p class="hint" id="confirmText"></p>
+      <div class="dialog-actions">
+        <button class="btn" type="button" data-close id="confirmCancel">Keep it</button>
+        <button class="btn danger" type="submit" value="ok" id="confirmOk">Delete</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Sign in (only when the list is shared through a Google Sheet) -->
+  <dialog id="loginDialog" aria-labelledby="loginTitle">
+    <form id="loginForm" method="dialog" novalidate>
+      <h3 id="loginTitle">Sign in to edit</h3>
+      <p class="hint">Type the shared password to add or change items.</p>
+      <label>Password<input type="password" name="password" autocomplete="current-password"></label>
+      <p class="form-error" id="loginError" role="alert"></p>
+      <div class="dialog-actions">
+        <button class="btn" type="button" data-close>Cancel</button>
+        <button class="btn primary" type="submit" id="loginGo">Sign in</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/board.js"></script>
+  <script src="js/insights.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
