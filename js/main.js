@@ -2,11 +2,38 @@
 (() => {
   const { $ } = PP;
   PP.render = () => { PP.renderBoard(); PP.renderTab(); };
-  PP.reload = async () => { try { PP.state = await Api.load(); PP.render(); } catch (e) { console.error(e); } };
-  PP.save = async (fn, okMsg) => {
-    try { await fn(); if (okMsg) PP.toast(okMsg); }
-    catch (err) { PP.toast(err.code === "auth" ? "Wrong password. Please sign in again." : (err.message || "Couldn’t save. Check the connection.")); await PP.reload(); PP.updateSign(); }
+  let rev = 0, saving = 0, loading = false, dirty = false;   // rev changes on every save, so a slow older fetch can't overwrite newer edits
+  PP.reload = async () => {
+    if (loading) return false; loading = true; const my = rev;
+    try { const d = await Api.load(); if (my !== rev || saving) return false; PP.state = d; dirty = false; PP.render(); stamp(); return true; }
+    catch (e) { console.error(e); return false; }
+    finally { loading = false; }
   };
+  PP.save = async (fn, okMsg) => {
+    rev++; saving++; let failed = null;
+    try { await fn(); if (okMsg) PP.toast(okMsg); dirty = false; }
+    catch (err) { failed = err; PP.toast(err.code === "auth" ? "Wrong password. Please sign in again." : (err.message || "Couldn’t save. Check the connection.")); }
+    finally { saving--; rev++; }
+    if (failed) { await PP.reload(); PP.updateSign(); }
+  };
+
+  /* refresh: a button on Board, Reports and Budget, plus a quiet refetch every 5 seconds */
+  const stamp = () => document.querySelectorAll("[data-updated]").forEach(el => { el.textContent = "Updated " + new Date().toLocaleTimeString(); });
+  document.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-refresh]"); if (!b) return;
+    document.querySelectorAll("[data-refresh]").forEach(x => { x.disabled = true; x.classList.add("spinning"); });
+    let ok = false;
+    try { for (let k = 0; k < 20 && loading; k++) await new Promise(r => setTimeout(r, 150)); ok = await PP.reload(); } finally { document.querySelectorAll("[data-refresh]").forEach(x => { x.disabled = false; x.classList.remove("spinning"); }); }
+    PP.toast(ok ? "Data refreshed" : "Couldn’t refresh. Check the connection.");
+  });
+  // typing in the Budget / Settings forms: don't wipe it with an automatic refresh
+  ["#budgetRoot", "#settingsRoot"].forEach(s => $(s).addEventListener("input", () => { dirty = true; }));
+  setInterval(() => {
+    if (document.hidden || !PP.state || Api.mode !== "sheet" || loading || saving) return;
+    if (document.querySelector("dialog[open]")) return;
+    if (dirty && (PP.tab === "budget" || PP.tab === "settings")) return;
+    PP.reload();
+  }, 5000);
 
   /* tabs */
   PP.setTab = (name) => {
@@ -14,7 +41,7 @@
     document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
     document.querySelectorAll(".tab").forEach(s => { s.hidden = s.id !== "tab-" + name; });
     $("main").classList.toggle("wide", name === "board");   // the board uses the full width; the other tabs stay narrow
-    PP.renderTab(); window.scrollTo({ top: 0 });
+    dirty = false; PP.renderTab(); window.scrollTo({ top: 0 });
   };
   $("#tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) PP.setTab(b.dataset.tab); });
 

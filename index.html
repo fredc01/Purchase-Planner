@@ -40,6 +40,7 @@
           <option value="price">Sort: Amount (high first)</option>
           <option value="newest">Sort: Newest</option>
         </select>
+        <button class="btn refresh-btn" type="button" data-refresh title="Reload the latest data"><span class="ri" aria-hidden="true">🔄</span><span class="rt">Refresh</span></button>
         <button class="btn primary" id="addBtn" type="button">+ Add item to purchase</button>
       </div>
       <div class="pane-switch" id="paneSwitch" role="group" aria-label="Show">
@@ -58,8 +59,12 @@
       </div>
     </section>
 
-    <section class="tab" id="tab-reports" hidden><div id="reportsRoot"></div></section>
-    <section class="tab" id="tab-budget" hidden><div id="budgetRoot"></div></section>
+    <section class="tab" id="tab-reports" hidden>
+      <div class="refreshbar"><button class="btn refresh-btn" type="button" data-refresh title="Reload the latest data"><span class="ri" aria-hidden="true">🔄</span><span class="rt">Refresh</span></button><small class="muted" data-updated></small></div>
+      <div id="reportsRoot"></div></section>
+    <section class="tab" id="tab-budget" hidden>
+      <div class="refreshbar"><button class="btn refresh-btn" type="button" data-refresh title="Reload the latest data"><span class="ri" aria-hidden="true">🔄</span><span class="rt">Refresh</span></button><small class="muted" data-updated></small></div>
+      <div id="budgetRoot"></div></section>
     <section class="tab" id="tab-settings" hidden><div id="settingsRoot"></div></section>
   </main>
 

@@ -179,3 +179,9 @@ table.log .r { text-align: right; } table.log tbody tr:hover { background: var(-
 .funds-bar .fund { padding: .5rem .8rem; } .funds-bar .fund strong { font-size: 1.25rem; }
 .funds-bar .btn { grid-column: 1 / -1; justify-self: start; }
 @media (max-width: 760px) { .funds-bar { grid-template-columns: 1fr 1fr; } .funds-bar .fund.all { grid-column: 1 / -1; } .funds-bar .fund span { font-size: .72rem; } }
+
+/* refresh buttons */
+.refreshbar { display: flex; align-items: center; gap: .7rem; margin-bottom: 1rem; }
+.refresh-btn.spinning .ri { display: inline-block; animation: ppspin .8s linear infinite; }
+@keyframes ppspin { to { transform: rotate(360deg); } }
+@media (max-width: 760px) { .toolbar .refresh-btn { flex: 0 0 auto; } }
